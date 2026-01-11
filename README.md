@@ -1,4 +1,4 @@
-# Website Membership Admin
+# Website Membership (Enhanced)
 
 Enhanced website membership plugin for CMS Builder with a full Admin UI.
 
