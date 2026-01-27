@@ -2,7 +2,7 @@
 /*
 Plugin Name: Website Membership (Enhanced)
 Description: Website membership functions for user sign-up, password reminder, login, user specific content, and login only content. Enhanced with Admin UI.
-Version: 1.00
+Version: 1.01
 CMS Version Required: 3.50
 Requires at least: 3.12
 Required System Plugin: true
@@ -23,7 +23,7 @@ Enhancements by Sagentic Web Design:
 // All settings are now managed through the Admin UI at Plugins > Website Membership > Settings
 
 $GLOBALS['WEBSITE_MEMBERSHIP_PLUGIN']  = true;
-$GLOBALS['WEBSITE_MEMBERSHIP_VERSION'] = '1.00';
+$GLOBALS['WEBSITE_MEMBERSHIP_VERSION'] = '1.01';
 $GLOBALS['WEBSITE_MEMBERSHIP_ORIGINAL_VERSION'] = '1.14'; // Base version this fork is based on
 
 // Load helper functions
