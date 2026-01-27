@@ -14,7 +14,6 @@ Original plugin: https://www.interactivetools.com
 
 Enhancements by Sagentic Web Design:
 - Admin UI for all settings (no code editing required)
-- Login audit with IP tracking
 - Dashboard with statistics and recent activity
 - Configurable required profile fields
 - Help documentation
@@ -44,7 +43,6 @@ if (defined('IS_CMS_ADMIN')) {
 	// Register admin menu pages
 	pluginAction_addHandlerAndLink(t('Dashboard'), 'wsm_adminDashboard', 'admins');
 	pluginAction_addHandler('wsm_adminSettings', 'admins');
-	pluginAction_addHandler('wsm_adminAuditLog', 'admins');
 	pluginAction_addHandler('wsm_adminHelp', 'admins');
 
 	// Legacy menu items (kept for backward compatibility)
@@ -428,53 +426,6 @@ __HTML__
 }
 ?>
 <?php
-// Hook into successful login to create audit records
-addAction('wsm_loginSuccess', 'wsm_createLoginAuditRecord', null, 0);
-
-/**
- * Create login audit record when user successfully logs in
- */
-function wsm_createLoginAuditRecord()
-{
-	global $CURRENT_USER;
-
-	// Skip if no current user
-	if (!$CURRENT_USER) {
-		return;
-	}
-
-	// Check if login audit is enabled
-	$settings = wsm_loadSettings();
-	if (empty($settings['enableLoginAudit'])) {
-		return;
-	}
-
-	// Get user's IP address
-	$ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
-
-	// Handle proxy headers
-	if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-		$ipAddress = $_SERVER['HTTP_X_FORWARDED_FOR'];
-		// Take the first IP if multiple are provided
-		$ipAddress = trim(explode(',', $ipAddress)[0]);
-	} elseif (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-		$ipAddress = $_SERVER['HTTP_CLIENT_IP'];
-	}
-
-	// Create audit record
-	$auditData = [
-		'createdDate'      => date('Y-m-d H:i:s'),
-		'createdByUserNum' => $CURRENT_USER['num'],
-		'updatedDate'      => date('Y-m-d H:i:s'),
-		'updatedByUserNum' => $CURRENT_USER['num'],
-		'name_on_account'  => $CURRENT_USER['num'], // This stores the user num
-		'ip_address'       => $ipAddress
-	];
-
-	// Insert the record
-	mysql_insert('login_audit', $auditData);
-}
-
 // Also update lastLoginDate more frequently (optional)
 // The default only updates every minute, this updates immediately on login
 addAction('wsm_loginSuccess', 'wsm_updateLastLoginDate', null, 0);

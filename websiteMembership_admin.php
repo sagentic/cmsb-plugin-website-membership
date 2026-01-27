@@ -17,7 +17,6 @@ function wsm_getPluginNav(string $currentPage): string
 	$pages = [
 		'dashboard' => ['label' => t('Dashboard'), 'action' => 'wsm_adminDashboard'],
 		'settings'  => ['label' => t('Settings'), 'action' => 'wsm_adminSettings'],
-		'audit'     => ['label' => t('Login History'), 'action' => 'wsm_adminAuditLog'],
 		'help'      => ['label' => t('Help'), 'action' => 'wsm_adminHelp'],
 	];
 
@@ -39,8 +38,6 @@ function wsm_getPluginNav(string $currentPage): string
 function wsm_adminDashboard(): void
 {
 	$settings = wsm_loadSettings();
-	$auditStats = wsm_getLoginAuditStats();
-	$recentLogins = wsm_getRecentLogins(10);
 
 	$adminUI = [];
 	$adminUI['PAGE_TITLE'] = [
@@ -98,71 +95,7 @@ function wsm_adminDashboard(): void
 	}
 	$content .= '</p></div></div>';
 
-	// Login Audit row
-	$content .= '<div class="form-group" style="margin-bottom:8px">';
-	$content .= '<label class="col-sm-2 control-label" style="padding-top:0">' . t('Login Audit') . '</label>';
-	$content .= '<div class="col-sm-10">';
-	$content .= '<p class="form-control-static" style="padding-top:0;padding-bottom:0;margin-bottom:0;min-height:0">';
-	if ($settings['enableLoginAudit']) {
-		$content .= '<strong style="color:#28a745"><i class="fa-duotone fa-solid fa-check" aria-hidden="true"></i> ' . t('Enabled') . '</strong>';
-	} else {
-		$content .= '<strong style="color:#dc3545"><i class="fa-duotone fa-solid fa-xmark" aria-hidden="true"></i> ' . t('Disabled') . '</strong>';
-	}
-	$content .= '</p></div></div>';
-
 	$content .= '</div>'; // end form-horizontal
-
-	// Login Statistics Section
-	if ($settings['enableLoginAudit'] && wsm_loginAuditTableExists()) {
-		$content .= '<div class="separator" style="margin-top:20px"><div>' . t('Login Statistics') . '</div></div>';
-
-		$content .= '<div class="row g-3 mb-4">';
-
-		// Helper function for stat card
-		$renderStatCard = function ($label, $value) {
-			$html = '<div class="col-6 col-lg-3">';
-			$html .= '<div class="border rounded-3 p-3 h-100 text-center">';
-			$html .= '<div class="text-uppercase small fw-semibold mb-3">' . $label . '</div>';
-			$html .= '<div class="fs-2 fw-bold text-info">' . $value . '</div>';
-			$html .= '</div></div>';
-			return $html;
-		};
-
-		$content .= $renderStatCard(t('Today'), (int)$auditStats['today']);
-		$content .= $renderStatCard(t('This Week'), (int)$auditStats['week']);
-		$content .= $renderStatCard(t('This Month'), (int)$auditStats['month']);
-		$content .= $renderStatCard(t('All Time'), (int)$auditStats['total']);
-
-		$content .= '</div>'; // end row
-
-		// Recent Logins Section
-		$content .= '<div class="separator" style="margin-top:20px"><div>' . t('Recent Logins') . '</div></div>';
-
-		if (empty($recentLogins)) {
-			$content .= '<p class="text-muted">' . t('No login records yet.') . '</p>';
-		} else {
-			$content .= '<div class="table-responsive">';
-			$content .= '<table class="table table-striped table-hover">';
-			$content .= '<thead><tr>';
-			$content .= '<th scope="col">' . t('Date') . '</th>';
-			$content .= '<th scope="col">' . t('User') . '</th>';
-			$content .= '<th scope="col">' . t('IP Address') . '</th>';
-			$content .= '</tr></thead><tbody>';
-
-			foreach ($recentLogins as $login) {
-				$username = wsm_getAccountUsername((int)$login['name_on_account']) ?? t('Unknown');
-				$content .= '<tr>';
-				$content .= '<td class="text-nowrap">' . date('Y-m-d H:i', strtotime($login['createdDate'])) . '</td>';
-				$content .= '<td>' . htmlencode($username) . '</td>';
-				$content .= '<td><code>' . htmlencode($login['ip_address'] ?? '') . '</code></td>';
-				$content .= '</tr>';
-			}
-
-			$content .= '</tbody></table></div>';
-
-			$content .= '<p style="margin-top:15px"><a href="?_pluginAction=wsm_adminAuditLog" class="btn btn-default">' . t('View Full Login History') . ' <i class="fa-duotone fa-solid fa-arrow-right" aria-hidden="true"></i></a></p>';
-		}
-	}
 
 	// Quick Actions Section
 	$content .= '<div class="separator" style="margin-top:20px"><div>' . t('Quick Actions') . '</div></div>';
@@ -231,7 +164,6 @@ function wsm_adminSettings(): void
 			$settings['accountsTable']   = $accountsTable;
 			$settings['separateLogin']   = !empty($_POST['separateLogin']);
 			$settings['requiredFields']  = $requiredFields;
-			$settings['enableLoginAudit'] = !empty($_POST['enableLoginAudit']);
 
 			if (wsm_saveSettings($settings)) {
 				// Re-apply settings to globals
@@ -412,144 +344,6 @@ function wsm_adminSettings(): void
 		$content .= '</div>'; // end margin wrapper
 	}
 
-	// Login Audit Section
-	$content .= '<div class="separator" style="margin-top:20px"><div>' . t('Login Audit') . '</div></div>';
-
-	$content .= '<div class="form-horizontal">';
-
-	// Enable Login Audit
-	$content .= '<div class="form-group">';
-	$content .= '<div class="col-sm-3 control-label">' . t('Enable Login Audit') . '</div>';
-	$content .= '<div class="col-sm-9">';
-	$content .= '<div class="checkbox"><label>';
-	$content .= '<input type="hidden" name="enableLoginAudit" value="0">';
-	$checked = $settings['enableLoginAudit'] ? ' checked' : '';
-	$content .= '<input type="checkbox" name="enableLoginAudit" value="1"' . $checked . '> ';
-	$content .= t('Record login events with IP address');
-	$content .= '</label></div>';
-	$content .= '<p class="help-block">' . t('When enabled, successful logins are recorded to the login_audit table with timestamp and IP address for security monitoring.') . '</p>';
-	$content .= '</div></div>';
-
-	$content .= '</div>'; // end form-horizontal
-
-	$adminUI['CONTENT'] = $content;
-	adminUI($adminUI);
-}
-
-/**
- * Audit Log page - View login history
- */
-function wsm_adminAuditLog(): void
-{
-	$settings = wsm_loadSettings();
-
-	// Pagination
-	$page = max(1, intval($_REQUEST['page'] ?? 1));
-	$perPage = intval($_REQUEST['perPage'] ?? 50);
-	$perPage = in_array($perPage, [25, 50, 100, 250]) ? $perPage : 50;
-	$offset = ($page - 1) * $perPage;
-
-	// Check if audit table exists
-	$tableExists = wsm_loginAuditTableExists();
-
-	// Get records
-	$logs = [];
-	$totalCount = 0;
-	$totalPages = 0;
-
-	if ($tableExists) {
-		$totalCount = mysql_count('login_audit', "1=1");
-		$totalPages = ceil($totalCount / $perPage);
-		$logs = mysql_select('login_audit', "1=1 ORDER BY `createdDate` DESC LIMIT {$offset}, {$perPage}");
-	}
-
-	$adminUI = [];
-	$adminUI['PAGE_TITLE'] = [
-		t("Plugins") => '?menu=admin&action=plugins',
-		t("Website Membership") => '?_pluginAction=wsm_adminDashboard',
-		t("Login History"),
-	];
-
-	$content = '';
-
-	// Plugin navigation
-	$content .= wsm_getPluginNav('audit');
-
-	if (!$tableExists) {
-		$content .= '<div class="alert alert-warning">';
-		$content .= '<i class="fa-duotone fa-solid fa-triangle-exclamation" aria-hidden="true"></i> ';
-		$content .= t('The login_audit table does not exist. Login history tracking requires a login_audit table in your database.');
-		$content .= '</div>';
-
-		$adminUI['CONTENT'] = $content;
-		adminUI($adminUI);
-		return;
-	}
-
-	if (!$settings['enableLoginAudit']) {
-		$content .= '<div class="alert alert-info">';
-		$content .= '<i class="fa-duotone fa-solid fa-circle-info" aria-hidden="true"></i> ';
-		$content .= t('Login audit is currently disabled. Enable it in Settings to record new login events.');
-		$content .= '</div>';
-	}
-
-	// Results count
-	$content .= '<p style="margin-bottom:15px">' . sprintf(t('Showing %d - %d of %d entries'), min($offset + 1, $totalCount), min($offset + $perPage, $totalCount), $totalCount) . '</p>';
-
-	if (empty($logs)) {
-		$content .= '<p class="text-muted">' . t('No login records found.') . '</p>';
-	} else {
-		$content .= '<div class="table-responsive">';
-		$content .= '<table class="table table-striped table-hover">';
-		$content .= '<thead><tr>';
-		$content .= '<th scope="col">' . t('Date') . '</th>';
-		$content .= '<th scope="col">' . t('User') . '</th>';
-		$content .= '<th scope="col">' . t('IP Address') . '</th>';
-		$content .= '</tr></thead><tbody>';
-
-		foreach ($logs as $log) {
-			$username = wsm_getAccountUsername((int)$log['name_on_account']) ?? t('Unknown');
-			$content .= '<tr>';
-			$content .= '<td class="text-nowrap">' . date('Y-m-d H:i:s', strtotime($log['createdDate'])) . '</td>';
-			$content .= '<td>' . htmlencode($username) . '</td>';
-			$content .= '<td><code>' . htmlencode($log['ip_address'] ?? '') . '</code></td>';
-			$content .= '</tr>';
-		}
-
-		$content .= '</tbody></table></div>';
-
-		// Pagination
-		if ($totalPages > 1) {
-			$baseUrl = '?_pluginAction=wsm_adminAuditLog&perPage=' . $perPage;
-
-			$content .= '<div class="text-center" style="margin-top:15px">';
-
-			// Previous
-			if ($page > 1) {
-				$content .= '<a href="' . $baseUrl . '&page=' . ($page - 1) . '" class="btn btn-default btn-sm">&laquo; ' . t('Previous') . '</a> ';
-			}
-
-			// Page numbers
-			$startPage = max(1, $page - 2);
-			$endPage = min($totalPages, $page + 2);
-
-			for ($i = $startPage; $i <= $endPage; $i++) {
-				if ($i === $page) {
-					$content .= '<span class="btn btn-primary btn-sm">' . $i . '</span> ';
-				} else {
-					$content .= '<a href="' . $baseUrl . '&page=' . $i . '" class="btn btn-default btn-sm">' . $i . '</a> ';
-				}
-			}
-
-			// Next
-			if ($page < $totalPages) {
-				$content .= '<a href="' . $baseUrl . '&page=' . ($page + 1) . '" class="btn btn-default btn-sm">' . t('Next') . ' &raquo;</a>';
-			}
-
-			$content .= '</div>';
-		}
-	}
-
 	$adminUI['CONTENT'] = $content;
 	adminUI($adminUI);
 }
@@ -589,7 +383,6 @@ function wsm_adminHelp(): void
 	$content .= '<li><strong>' . t('Profile Management') . '</strong> - ' . t('User profile editing with required field enforcement') . '</li>';
 	$content .= '<li><strong>' . t('Content Protection') . '</strong> - ' . t('Restrict page access to logged-in users') . '</li>';
 	$content .= '<li><strong>' . t('Access Levels') . '</strong> - ' . t('Control content visibility based on user permissions') . '</li>';
-	$content .= '<li><strong>' . t('Login Audit') . '</strong> - ' . t('Track login events with IP addresses') . '</li>';
 	$content .= '</ul>';
 
 	// Getting Started Section
@@ -801,16 +594,6 @@ if (@$_REQUEST[\'missing_fields\']) {
 	$content .= '<tr><td><code>$GLOBALS[\'WEBSITE_LOGIN_POST_LOGIN_URL\']</code></td><td>' . t('Default redirect after login') . '</td></tr>';
 	$content .= '<tr><td><code>$GLOBALS[\'WEBSITE_MEMBERSHIP_PLUGIN\']</code></td><td>' . t('True if the plugin is active (useful for conditional code)') . '</td></tr>';
 	$content .= '</tbody></table>';
-
-	// Login Audit Section
-	$content .= '<div class="separator" style="margin-top:20px"><div>' . t('Login Audit') . '</div></div>';
-	$content .= '<p>' . t('When enabled, the plugin records each successful login with:') . '</p>';
-	$content .= '<ul>';
-	$content .= '<li>' . t('Timestamp of the login') . '</li>';
-	$content .= '<li>' . t('User account number') . '</li>';
-	$content .= '<li>' . t('IP address (including proxy detection)') . '</li>';
-	$content .= '</ul>';
-	$content .= '<p>' . t('This data is stored in the "login_audit" table and can be viewed in the Login History page.') . '</p>';
 
 	// Technical Notes Section (Account Configuration)
 	$content .= '<div class="separator" style="margin-top:20px"><div>' . t('Account Configuration') . '</div></div>';

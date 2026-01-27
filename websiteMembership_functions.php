@@ -38,9 +38,6 @@ function wsm_getDefaultSettings(): array
 		// Account Settings
 		'accountsTable'   => 'accounts',
 		'separateLogin'   => false,
-
-		// Login Audit
-		'enableLoginAudit' => true,
 	];
 }
 
@@ -200,98 +197,3 @@ function wsm_getAccountsTableFields(): array
 	return $fields;
 }
 
-/**
- * Check if login audit table exists
- *
- * @return bool True if table exists
- */
-function wsm_loginAuditTableExists(): bool
-{
-	global $TABLE_PREFIX;
-
-	$result = mysqli()->query("SHOW TABLES LIKE '{$TABLE_PREFIX}login_audit'");
-	return $result && $result->num_rows > 0;
-}
-
-/**
- * Get login audit statistics
- *
- * @return array Statistics array
- */
-function wsm_getLoginAuditStats(): array
-{
-	if (!wsm_loginAuditTableExists()) {
-		return [
-			'today'     => 0,
-			'week'      => 0,
-			'month'     => 0,
-			'total'     => 0,
-			'lastLogin' => null,
-		];
-	}
-
-	$todayStart = date('Y-m-d 00:00:00');
-	$weekStart = date('Y-m-d 00:00:00', strtotime('monday this week'));
-	$monthStart = date('Y-m-01 00:00:00');
-
-	return [
-		'today'     => (int)mysql_count('login_audit', "`createdDate` >= '{$todayStart}'"),
-		'week'      => (int)mysql_count('login_audit', "`createdDate` >= '{$weekStart}'"),
-		'month'     => (int)mysql_count('login_audit', "`createdDate` >= '{$monthStart}'"),
-		'total'     => (int)mysql_count('login_audit', "1=1"),
-		'lastLogin' => wsm_getLastLoginDate(),
-	];
-}
-
-/**
- * Get the last login date from audit table
- *
- * @return string|null Last login date or null
- */
-function wsm_getLastLoginDate(): ?string
-{
-	if (!wsm_loginAuditTableExists()) {
-		return null;
-	}
-
-	$records = mysql_select('login_audit', "1=1 ORDER BY `createdDate` DESC LIMIT 1");
-	if (!empty($records)) {
-		return $records[0]['createdDate'];
-	}
-
-	return null;
-}
-
-/**
- * Get recent login audit records
- *
- * @param int $limit Number of records to return
- * @return array Array of audit records
- */
-function wsm_getRecentLogins(int $limit = 10): array
-{
-	if (!wsm_loginAuditTableExists()) {
-		return [];
-	}
-
-	return mysql_select('login_audit', "1=1 ORDER BY `createdDate` DESC LIMIT {$limit}");
-}
-
-/**
- * Get the account username by num
- *
- * @param int $accountNum Account number
- * @return string|null Username or null
- */
-function wsm_getAccountUsername(int $accountNum): ?string
-{
-	$settings = wsm_loadSettings();
-	$tableName = $settings['accountsTable'];
-
-	$account = mysql_get($tableName, $accountNum);
-	if ($account) {
-		return $account['username'] ?? $account['email'] ?? "User #{$accountNum}";
-	}
-
-	return null;
-}

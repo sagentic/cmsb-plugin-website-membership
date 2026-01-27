@@ -1,12 +1,15 @@
 {
-	"loginFormUrl": "/entry/",
-	"signupUrl": "/entry/signup.php",
-	"reminderUrl": "/entry/reset.php",
-	"profileUrl": "/profile/",
-	"postLoginUrl": "/",
-	"postLogoffUrl": "/",
-	"requiredFields": ["agree_tos", "agree_legal"],
-	"accountsTable": "accounts",
-	"separateLogin": false,
-	"enableLoginAudit": true
+    "loginFormUrl": "/entry/",
+    "signupUrl": "/entry/signup.php",
+    "reminderUrl": "/entry/reset.php",
+    "profileUrl": "/profile/",
+    "postLoginUrl": "/",
+    "postLogoffUrl": "/",
+    "requiredFields": [
+        "fullname",
+        "goes_by",
+        "phone_number"
+    ],
+    "accountsTable": "accounts",
+    "separateLogin": false
 }

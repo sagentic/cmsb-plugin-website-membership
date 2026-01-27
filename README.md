@@ -1,4 +1,4 @@
-# Website Membership (Enhanced)
+# Website Membership Admin
 
 Enhanced website membership plugin for CMS Builder with a full Admin UI.
 
@@ -27,9 +27,8 @@ This is an enhanced fork of the websiteMembership plugin (v1.14) by InteractiveT
 
 ### New in This Fork
 
--   **Admin UI Dashboard** - Overview of plugin status and login statistics
+-   **Admin UI Dashboard** - Overview of plugin status
 -   **Settings Page** - Configure all options without editing code
--   **Login History** - View login audit records with IP tracking
 -   **Help Documentation** - Built-in comprehensive documentation
 -   **Required Fields UI** - Select required profile fields with checkboxes
 
@@ -98,7 +97,6 @@ All settings are configured through the Admin UI at **Plugins > Website Membersh
 | -------------- | --------------------------------------- | ---------- |
 | Accounts Table | Database table for user accounts        | `accounts` |
 | Separate Login | Allow simultaneous website/CMS sessions | Disabled   |
-| Login Audit    | Record login events with IP addresses   | Enabled    |
 
 ### Required Profile Fields
 
@@ -300,18 +298,6 @@ The plugin uses these email templates (customizable at **Admin > Email Templates
 | --------------------- | ------------------------------------ |
 | `USER-SIGNUP`         | Sent to new users after registration |
 | `USER-PASSWORD-RESET` | Sent when requesting password reset  |
-
----
-
-## Login Audit
-
-When enabled, the plugin records each successful login with:
-
--   Timestamp
--   User account number
--   IP address (with proxy detection)
-
-View login history at **Plugins > Website Membership Admin > Login History**.
 
 ---
 
